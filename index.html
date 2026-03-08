@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>2609 bông hoa</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,300;1,300;1,500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --rose:  #c0395a;
+      --cream: #fdf6f0;
+      --gold:  #c9a96e;
+      --dark:  #2a1a22;
+    }
+
+    body {
+      min-height: 100vh;
+      /* display: flex; align-items: center; justify-content: center; */
+      
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #1a0a12 0%, #2d0f20 40%, #1a0a12 100%);
+      font-family: 'Cormorant Garamond', serif;
+      /* overflow: hidden; */
+      overflow-x: hidden;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      transition: background 1.4s ease;
+      padding: 24px 0;
+    }
+    body.green-mode {
+      background: linear-gradient(135deg, #051a0a 0%, #0d3320 40%, #051a0a 100%);
+    }
+
+    /* ── Falling petals ── */
+    .petals { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+    .petal {
+      position: absolute; width: 12px; height: 16px;
+      border-radius: 50% 50% 50% 0; opacity: 0;
+      background: radial-gradient(ellipse at 40% 30%, #f2a7bb, #c0395a);
+      animation: fall linear infinite;
+      transition: background 1.4s ease;
+    }
+    body.green-mode .petal {
+      background: radial-gradient(ellipse at 40% 30%, #a8f0c0, #2db35a);
+    }
+    .petal:nth-child(1)  { left:5%;  animation-duration:7s;  animation-delay:0s;   width:10px; height:13px; }
+    .petal:nth-child(2)  { left:15%; animation-duration:9s;  animation-delay:1s;   width:8px;  height:11px; }
+    .petal:nth-child(3)  { left:25%; animation-duration:6s;  animation-delay:2s; }
+    .petal:nth-child(4)  { left:35%; animation-duration:8s;  animation-delay:0.5s; width:14px; height:18px; }
+    .petal:nth-child(5)  { left:50%; animation-duration:10s; animation-delay:3s; }
+    .petal:nth-child(6)  { left:60%; animation-duration:7s;  animation-delay:1.5s; width:9px;  height:12px; }
+    .petal:nth-child(7)  { left:70%; animation-duration:9s;  animation-delay:4s; }
+    .petal:nth-child(8)  { left:80%; animation-duration:6s;  animation-delay:0.8s; width:11px; height:14px; }
+    .petal:nth-child(9)  { left:88%; animation-duration:8s;  animation-delay:2.5s; }
+    .petal:nth-child(10) { left:95%; animation-duration:11s; animation-delay:1.2s; width:7px;  height:10px; }
+    @keyframes fall {
+      0%   { transform: translateY(-20px) rotate(0deg); opacity: 0; }
+      10%  { opacity: 0.7; } 90% { opacity: 0.5; }
+      100% { transform: translateY(105vh) rotate(540deg); opacity: 0; }
+    }
+
+    /* ══════════════════════════════════
+       INTRO SCREEN
+    ══════════════════════════════════ */
+    #intro {
+      position: relative; z-index: 10;
+      display: flex; flex-direction: column; align-items: center; gap: 36px;
+      animation: fadeIn .8s ease both;
+      width: 100%;
+      text-align: center;
+      padding: 0 24px;
+    }
+    #intro.hide { animation: fadeOut .5s ease forwards; pointer-events: none; }
+
+    .hint-text {
+      font-size: 1.1rem; font-style: italic; letter-spacing: .08em;
+      color: rgba(242,167,187,.8); text-align: center;
+      transition: color 1s ease;
+      animation: blink 2.4s ease-in-out infinite;
+    }
+    body.green-mode .hint-text { color: rgba(100,240,150,.8); animation: none; opacity: 1; }
+    @keyframes blink { 0%,100% { opacity:.5; } 50% { opacity:1; } }
+
+    /* ── Single bulb ── */
+    .bulb-wrap {
+      display: flex; flex-direction: column; align-items: center; gap: 20px;
+    }
+
+    .bulb-btn {
+      background: none; border: none; cursor: pointer;
+      padding: 0; display: block;
+      /* no outline ring needed */
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .bulb {
+      width: 90px; height: 90px;
+      border-radius: 50%;
+      /* colour & glow driven by JS via CSS vars */
+      background: radial-gradient(circle at 38% 32%,
+        var(--bulb-highlight, #ff8080),
+        var(--bulb-mid,       #e00000),
+        var(--bulb-deep,      #7a0000)
+      );
+      box-shadow:
+        0 0 20px 8px  var(--glow-near,  rgba(255,60,60,.65)),
+        0 0 60px 20px var(--glow-far,   rgba(200,0,0,.35)),
+        inset 0 -6px 14px rgba(0,0,0,.35),
+        inset 0 4px 10px  rgba(255,255,255,.12);
+      transition:
+        background  .4s ease,
+        box-shadow  .4s ease;
+      animation: bulbPulse 1.8s ease-in-out infinite;
+      position: relative;
+    }
+    /* glare dot */
+    .bulb::after {
+      content: '';
+      position: absolute; top: 18%; left: 26%;
+      width: 28%; height: 22%;
+      background: radial-gradient(ellipse, rgba(255,255,255,.55), transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    @keyframes bulbPulse {
+      0%,100% { transform: scale(1); }
+      50%      { transform: scale(1.045); }
+    }
+
+    /* progress ring (SVG overlay) */
+    .ring-wrap {
+      position: relative; width: 130px; height: 130px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .ring-wrap .bulb-btn { position: absolute; }
+    .ring-svg {
+      position: absolute; top: 0; left: 0;
+      width: 130px; height: 130px;
+      transform: rotate(-90deg);
+      pointer-events: none;
+    }
+    .ring-track { fill: none; stroke: rgba(255,255,255,.08); stroke-width: 4; }
+    .ring-fill  {
+      fill: none; stroke-width: 4; stroke-linecap: round;
+      stroke-dasharray: 345; stroke-dashoffset: 345;
+      stroke: #e00;
+      transition: stroke-dashoffset .35s ease, stroke .4s ease;
+    }
+
+    /* status text */
+    .status-text {
+      font-size: .95rem; font-style: italic; letter-spacing: .05em;
+      color: rgba(255,255,255,.5); text-align: center;
+      min-height: 1.5em; transition: color .6s;
+    }
+
+    /* ripple on click */
+    .ripple-el {
+      position: fixed; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,.45);
+      pointer-events: none; z-index: 200;
+      width: 110px; height: 110px;
+      animation: rippleOut .65s ease-out forwards;
+    }
+    @keyframes rippleOut {
+      0%   { transform: translate(-50%,-50%) scale(1);   opacity: .7; }
+      100% { transform: translate(-50%,-50%) scale(2.8); opacity: 0; }
+    }
+
+    /* ══════════════════════════════════
+       CARD SCREEN
+    ══════════════════════════════════ */
+    #card-screen { display: none; position: relative; z-index: 10; }
+    /* #card-screen { display: none; position: relative; z-index: 10; width: 100%; padding: 20px 0 40px; } */
+    #card-screen.show {
+      display: block;
+      animation: cardAppear .8s cubic-bezier(.22,1,.36,1) both;
+    }
+    @keyframes cardAppear {
+      from { opacity:0; transform: scale(.85) translateY(30px); }
+      to   { opacity:1; transform: scale(1) translateY(0); }
+    }
+
+    /* floating flowers */
+    .float-flower {
+      position: fixed; pointer-events: none; z-index: 5; opacity: 0;
+      animation: floatAround var(--dur) ease-in-out var(--delay) infinite both;
+    }
+    @keyframes floatAround {
+      0%   { opacity:0; transform: translate(0,0) rotate(0deg) scale(.7); }
+      15%  { opacity:.8; }
+      50%  { transform: translate(var(--mx), var(--my)) rotate(180deg) scale(1.1); opacity:.7; }
+      85%  { opacity:.8; }
+      100% { opacity:0; transform: translate(0, calc(var(--my)*2)) rotate(360deg) scale(.7); }
+    }
+
+    /* card styles */
+    .card {
+      position: relative; width: min(460px, 92vw);
+      background: var(--cream); border-radius: 4px;
+      /* padding: 50px 44px 44px; */
+      padding: clamp(28px, 8vw, 50px) clamp(20px, 8vw, 44px) clamp(24px, 6vw, 44px);
+      box-shadow: 0 0 0 1px var(--gold),
+                  0 0 0 6px rgba(201,169,110,.15),
+                  0 30px 80px rgba(0,0,0,.6);
+      overflow: visible;
+    }
+    .card::before {
+      content:''; position:absolute; top:0; left:0; right:0; height:5px;
+      /* background: linear-gradient(90deg, transparent, var(--gold), var(--rose), var(--gold), transparent); */
+    }
+    .card::after {
+      content:'❀'; position:absolute; bottom:-20px; right:-10px;
+      font-size:180px; color:rgba(192,57,90,.06); line-height:1; pointer-events:none;
+    }
+
+    .date-badge {
+      display:inline-flex; align-items:baseline; gap:6px;
+      background:var(--rose); color:#fff;
+      padding:4px 16px 5px; border-radius:2px; margin-bottom:28px;
+      animation: fadeUp .55s .1s both;
+    }
+    .date-badge .num   { font-family:'Playfair Display',serif; font-size:1.6rem; font-weight:700; }
+    .date-badge .label { font-size:.75rem; letter-spacing:.12em; text-transform:uppercase; opacity:.9; }
+
+    .heading {
+      font-family:'Playfair Display',serif;
+      font-size: clamp(2rem,6vw,2.8rem); font-weight:700;
+      color:var(--dark); line-height:1.15; margin-bottom:6px;
+      animation: fadeUp .55s .22s both;
+    }
+    .heading em { font-style:italic; color:var(--rose); }
+
+    .divider {
+      display:flex; align-items:center; gap:12px; margin:22px 0;
+      animation: fadeUp .55s .32s both;
+    }
+    .divider::before, .divider::after {
+      content:''; flex:1; height:1px;
+      background: linear-gradient(90deg, transparent, var(--gold));
+    }
+    .divider::after { transform:scaleX(-1); }
+    .divider-icon { color:var(--gold); font-size:1.1rem; }
+
+    .message {
+      font-size:1.05rem; line-height:1.85; color:#4a3040;
+      font-style:italic; font-weight:300;
+      animation: fadeUp .55s .42s both;
+    }
+
+    .flowers {
+      display:flex; justify-content:center; gap:8px;
+      margin:28px 0 0; font-size:1.5rem;
+      animation: fadeUp .55s .52s both;
+    }
+    .flowers span { display:inline-block; animation: bounce 2.4s ease-in-out infinite; }
+    .flowers span:nth-child(2) { animation-delay:.15s; }
+    .flowers span:nth-child(3) { animation-delay:.3s; }
+    .flowers span:nth-child(4) { animation-delay:.45s; }
+    .flowers span:nth-child(5) { animation-delay:.6s; }
+    @keyframes bounce { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-6px);} }
+
+    /* ── flowers row ── */
+    .flowers { position: relative; }
+
+    /* middle flower — slightly different wobble, cursor becomes pointer */
+    .flowers span.middle-flower {
+      cursor: pointer;
+      animation: bounceMiddle 2.4s ease-in-out infinite !important;
+      position: relative;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      /* larger tap area on mobile */
+      padding: 6px;
+    }
+    /* slightly wider, slower wobble so it stands out to a careful eye */
+    @keyframes bounceMiddle {
+      0%,100% { transform: translateY(0) rotate(0deg); }
+      25%      { transform: translateY(-9px) rotate(-6deg); }
+      75%      { transform: translateY(-5px) rotate(4deg); }
+    }
+    /* very faint petal-shimmer under the middle flower — barely visible */
+    .flowers span.middle-flower::after {
+      content: '';
+      position: absolute; bottom: -4px; left: 50%;
+      transform: translateX(-50%);
+      width: 6px; height: 6px; border-radius: 50%;
+      background: rgba(192,57,90,.25);
+      animation: dotPulse 2.4s ease-in-out infinite;
+    }
+    @keyframes dotPulse {
+      0%,100% { opacity: .2; transform: translateX(-50%) scale(1); }
+      50%      { opacity: .6; transform: translateX(-50%) scale(1.5); }
+    }
+
+    /* revealed message slides down from behind the flowers */
+    .secret-msg {
+      overflow: hidden; max-height: 0; opacity: 0;
+      transition: max-height .75s cubic-bezier(.4,0,.2,1), opacity .6s ease, margin .4s ease;
+      margin-top: 0;
+    }
+    .secret-msg.open {
+      max-height: 220px; opacity: 1; margin-top: 18px;
+    }
+    .secret-msg-inner {
+      padding: 14px 16px;
+      border-left: 2px solid var(--gold);
+      margin: 0 4px;
+    }
+    .secret-label {
+      display: block; font-family:'Cormorant Garamond',serif;
+      font-size: .7rem; letter-spacing: .18em; text-transform: uppercase;
+      color: var(--gold); margin-bottom: 8px;
+    }
+    .secret-msg p {
+      font-family:'Playfair Display',serif; font-size: 1rem;
+      font-style: italic; line-height: 1.85; color: var(--rose);
+      text-align: left;
+    }
+    /* once revealed, middle flower stops wobbling and glows softly */
+    .flowers span.middle-flower.revealed {
+      animation: none !important;
+      cursor: default;
+      filter: drop-shadow(0 0 6px rgba(192,57,90,.55));
+    }
+    .flowers span.middle-flower.revealed::after { display: none; }
+
+    .recipient { text-align:center; animation: fadeUp .55s .65s both; }
+    .recipient .to   { font-size:.72rem; letter-spacing:.18em; text-transform:uppercase; color:var(--gold); margin-bottom:4px; }
+    .recipient .name { font-family:'Playfair Display',serif; font-size:1.55rem; font-style:italic; color:var(--rose); }
+
+    #click-counter-card {
+      text-align:center; font-size:.8rem; font-style:italic;
+      color:var(--gold); letter-spacing:.05em; min-height:1.2em;
+      margin-top:10px; opacity:0; transition:opacity .4s;
+    }
+    #click-counter-card.visible { opacity:1; }
+
+    .footer {
+      margin-top:28px; border-top:1px solid rgba(201,169,110,.3); padding-top:18px;
+      display:flex; justify-content:space-between; align-items:flex-end;
+      animation: fadeUp .55s .72s both;
+    }
+    .footer .from      { font-size:.8rem; color:#9a7080; }
+    .footer .from span { display:block; font-family:'Playfair Display',serif; font-size:1.05rem; font-style:italic; color:var(--dark); }
+    .footer .heart-clicker {
+      font-size:1.6rem; cursor:pointer; user-select:none;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    .footer .heart-clicker:active { transform:scale(.8) !important; }
+    @keyframes pulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.2);} }
+
+    /* ══════════════════════════════════
+       MOBILE RESPONSIVE
+    ══════════════════════════════════ */
+    @media (max-width: 480px) {
+      #intro { gap: 24px; padding: 0 16px; }
+
+      .hint-text { font-size: 1rem; }
+      .status-text { font-size: .85rem; padding: 0 24px; }
+
+      /* bulb slightly smaller on very small screens */
+      .bulb { width: 90px; height: 90px; }
+      .ring-wrap { width: 110px; height: 110px; }
+      .ring-svg  { width: 110px; height: 110px; }
+
+      .heading { font-size: 1.75rem; }
+      .message { font-size: .97rem; line-height: 1.75; }
+
+      .date-badge .num   { font-size: 1.3rem; }
+      .date-badge .label { font-size: .68rem; }
+
+      .flowers { font-size: 1.3rem; gap: 6px; }
+      .recipient .name { font-size: 1.3rem; }
+
+      .footer .from span { font-size: .95rem; }
+      .footer .heart-clicker { font-size: 1.4rem; }
+
+      .secret-msg p { font-size: .92rem; }
+    }
+
+    /* card should be scrollable if content overflows on very short screens */
+    @media (max-height: 700px) {
+      body { align-items: flex-start; padding: 20px 0; }
+      #card-screen { margin: auto; }
+      /* body { align-items: flex-start; }
+      #card-screen { padding: 16px 0 32px; } */
+    }
+
+    /* remove hover effects on touch devices — middle flower hint via animation only */
+    @media (hover: none) {
+      .flowers span.middle-flower:hover { transform: none; }
+    }
+    @keyframes fadeUp  { from{opacity:0;transform:translateY(16px);} to{opacity:1;transform:translateY(0);} }
+    @keyframes fadeIn  { from{opacity:0;} to{opacity:1;} }
+    @keyframes fadeOut { from{opacity:1;} to{opacity:0;transform:scale(.9);} }
+    @keyframes particleFly {
+      0%   { transform:translate(-50%,-50%) scale(1) rotate(0deg); opacity:1; }
+      100% { transform:translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(0) rotate(var(--rot)); opacity:0; }
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+</head>
+<body>
+
+  <div class="petals">
+    <div class="petal"></div><div class="petal"></div><div class="petal"></div>
+    <div class="petal"></div><div class="petal"></div><div class="petal"></div>
+    <div class="petal"></div><div class="petal"></div><div class="petal"></div>
+    <div class="petal"></div>
+  </div>
+
+  <!-- ══ INTRO ══ -->
+  <div id="intro">
+    <p class="hint-text" id="hint-text">✨ Bấm vào đèn để mở thiệp ✨</p>
+
+    <div class="bulb-wrap">
+      <div class="ring-wrap">
+        <!-- progress ring -->
+        <svg class="ring-svg" viewBox="0 0 130 130">
+          <circle class="ring-track" cx="65" cy="65" r="55"/>
+          <circle class="ring-fill"  cx="65" cy="65" r="55" id="ring-fill"/>
+        </svg>
+        <!-- bulb button -->
+        <button class="bulb-btn" id="bulb-btn" onclick="pressLight(event)" aria-label="Bấm để bật đèn xanh">
+          <div class="bulb" id="bulb"></div>
+        </button>
+      </div>
+    </div>
+
+    <p class="status-text" id="status-text">Đèn đỏ... chưa được phép mở thiệp đâu nhé 😅</p>
+  </div>
+
+  <!-- ══ CARD ══ -->
+  <div id="card-screen">
+    <div class="card">
+      <div class="date-badge">
+        <span class="num">8 / 3</span>
+        <span class="label">Ngày Quốc tế Phụ nữ</span>
+      </div>
+
+      <h1 class="heading">Gửi <br><em>Liu</em></h1>
+
+      <div class="divider"><span class="divider-icon">✦</span></div>
+
+      <p class="message">
+        8/3 rồi nên phải gửi bạn lời chúc một chút 😆. <br>
+        Chúc bạn một ngày 8/3 thật vui nhé 🌸 <br>
+        Mong là hôm nay và những ngày sau bạn luôn được yêu thương, trân trọng<br>
+        và lúc nào cũng rạng rỡ theo cách rất riêng của mình.
+      </p>
+
+      <div class="flowers" style="flex-direction:column; align-items:center; gap:0;">
+        <div style="display:flex; justify-content:center; gap:8px;">
+          <span>🌸</span>
+          <span>🌹</span>
+          <span class="middle-flower" id="middle-flower" onclick="revealSecret()" title="">💐</span>
+          <span>🌺</span>
+          <span>🌸</span>
+        </div>
+        <!-- hidden message — slides out below the flowers -->
+        <div class="secret-msg" id="secret-msg">
+          <div class="secret-msg-inner">
+            <span class="secret-label">💌 Bí mật đã được bật mí</span>
+            <p>
+              <!-- ✏️ Thay nội dung tin nhắn bí mật tại đây -->
+              Tớ vẫn muốn tìm hiểu bạn nhiều hơn.<br>
+              Hi vọng chúng ta sẽ có thêm những cuộc trò chuyện thay vì những dòng tin nhắn. 💚
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div id="click-counter-card"></div>
+
+      <div class="footer">
+        <div class="heart-clicker" onclick="clickCardHeart(this)">💖</div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  /* ═══════════════════════════════════
+     COLOUR INTERPOLATION  red → green
+     red   = hsl(0,  100%, 45%)
+     green = hsl(120, 90%, 38%)
+  ═══════════════════════════════════ */
+  const TOTAL_CLICKS = 8;
+  let clicks  = 0;
+  let done    = false;
+
+  // lerp a number
+  const lerp = (a, b, t) => a + (b - a) * t;
+
+  // hsl string
+  const hsl = (h, s, l) => `hsl(${h},${s}%,${l}%)`;
+
+  function getColor(t) {
+    // t: 0 → 1
+    const h  = lerp(0,   120, t);
+    const s  = lerp(100,  90, t);
+    const lM = lerp(32,   28, t);   // mid
+    const lH = lerp(55,   52, t);   // highlight
+    const lD = lerp(18,   14, t);   // deep
+    // glow colours
+    const gNearA = lerp(.65, .7, t);
+    const gFarA  = lerp(.35, .4, t);
+    return { h, s, lM, lH, lD, gNearA, gFarA };
+  }
+
+  function applyColor(t) {
+    const c    = getColor(t);
+    const bulb = document.getElementById('bulb');
+
+    bulb.style.setProperty('--bulb-highlight', hsl(c.h, c.s, c.lH));
+    bulb.style.setProperty('--bulb-mid',       hsl(c.h, c.s, c.lM));
+    bulb.style.setProperty('--bulb-deep',      hsl(c.h, c.s, c.lD));
+
+    const nearCol = `hsla(${c.h},${c.s}%,55%,${c.gNearA})`;
+    const farCol  = `hsla(${c.h},${c.s}%,40%,${c.gFarA})`;
+    bulb.style.setProperty('--glow-near', nearCol);
+    bulb.style.setProperty('--glow-far',  farCol);
+
+    // progress ring colour
+    const ring = document.getElementById('ring-fill');
+    ring.style.stroke = hsl(c.h, c.s, 52);
+    ring.style.strokeDashoffset = 345 * (1 - t);
+  }
+
+  const statusMsgs = [
+    'Đèn đỏ... chưa được phép mở thiệp đâu nhé 😅',
+    'Vẫn còn đỏ đó, bấm thêm đi! 🔴',
+    'Đang chuyển dần rồi... 🟠',
+    'Màu cam rồi kìa, gần lắm! 🟠',
+    'Sắp vàng rồi... bấm nữa! 🟡',
+    'Vàng vàng rồi đó, còn một chút thôi! 💛',
+    'Xanh lá sắp sáng rồi... 💚',
+    'Gần lắm rồi, bấm thêm một cái nữa thôi!!!',
+  ];
+
+  function pressLight(e) {
+    if (done) return;
+    clicks++;
+
+    const t = Math.min(clicks / TOTAL_CLICKS, 1);
+    applyColor(t);
+
+    // ripple
+    spawnRipple(e, t);
+
+    // status text
+    const statusEl = document.getElementById('status-text');
+    if (clicks < TOTAL_CLICKS) {
+      statusEl.textContent = statusMsgs[Math.min(clicks - 1, statusMsgs.length - 1)];
+      const hue = lerp(0, 120, t);
+      statusEl.style.color = `hsl(${hue},80%,70%)`;
+    }
+
+    // DONE
+    if (clicks >= TOTAL_CLICKS) {
+      done = true;
+      document.getElementById('hint-text').textContent  = '💚 Đèn xanh bật rồi!!! Mở thiệp thôi~';
+      statusEl.textContent = '💚 ĐÈN XANH! Được phép mở thiệp rồi! 🎉';
+      statusEl.style.color = 'rgba(100,255,150,.9)';
+      document.body.classList.add('green-mode');
+      document.getElementById('bulb-btn').style.cursor = 'default';
+
+      // burst particles on completion
+      spawnBurst(e);
+      setTimeout(openCard, 1600);
+    }
+  }
+
+  function spawnRipple(e, t) {
+    const btn  = document.getElementById('bulb-btn');
+    const rect = btn.getBoundingClientRect();
+    const cx   = rect.left + rect.width  / 2;
+    const cy   = rect.top  + rect.height / 2;
+    const hue  = lerp(0, 120, t);
+    const el   = document.createElement('div');
+    el.className = 'ripple-el';
+    el.style.cssText = `left:${cx}px; top:${cy}px; border-color: hsl(${hue},90%,60%);`;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 700);
+  }
+
+  function spawnBurst(e) {
+    const btn  = document.getElementById('bulb-btn');
+    const rect = btn.getBoundingClientRect();
+    const cx   = rect.left + rect.width  / 2;
+    const cy   = rect.top  + rect.height / 2;
+    const emojis = ['💚','✨','🌿','🍀','💫','🌸','⭐','🎉','💖','🌟'];
+    for (let i = 0; i < 18; i++) {
+      const el    = document.createElement('div');
+      el.textContent = emojis[i % emojis.length];
+      const angle = (Math.PI * 2 / 18) * i;
+      const dist  = 70 + Math.random() * 130;
+      el.style.cssText = `
+        position:fixed; pointer-events:none; z-index:999; font-size:1.3rem;
+        left:${cx}px; top:${cy}px; transform:translate(-50%,-50%);
+        --tx:${Math.cos(angle)*dist}px;
+        --ty:${Math.sin(angle)*dist - Math.random()*50}px;
+        --rot:${(Math.random()-.5)*720}deg;
+        animation: particleFly .9s ${Math.random()*.15}s ease-out forwards;
+      `;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 1200);
+    }
+  }
+
+  // initialise colour to pure red
+  applyColor(0);
+
+  /* ═══════════════════════════════════
+     OPEN CARD
+  ═══════════════════════════════════ */
+  function openCard() {
+    const intro = document.getElementById('intro');
+    const card  = document.getElementById('card-screen');
+    intro.classList.add('hide');
+    setTimeout(() => {
+      intro.style.display = 'none';
+      card.classList.add('show');
+      spawnFloatingFlowers();
+    }, 480);
+  }
+
+  function spawnFloatingFlowers() {
+    const emojis = ['🌸','🌺','🌹','🌼','💮','🏵️','🌻','💐'];
+    for (let i = 0; i < 14; i++) {
+      const el = document.createElement('div');
+      el.className   = 'float-flower';
+      el.textContent = emojis[i % emojis.length];
+      const side = Math.floor(Math.random() * 4);
+      let x, y;
+      if      (side === 0) { x = Math.random()*100; y = Math.random()*15; }
+      else if (side === 1) { x = 78+Math.random()*18; y = Math.random()*100; }
+      else if (side === 2) { x = Math.random()*100; y = 80+Math.random()*18; }
+      else                 { x = Math.random()*18;  y = Math.random()*100; }
+      el.style.cssText = `
+        left:${x}vw; top:${y}vh;
+        --mx:${(Math.random()-.5)*60}px; --my:${(Math.random()-.5)*60}px;
+        --dur:${4+Math.random()*5}s; --delay:${Math.random()*4}s;
+        font-size:${1.1+Math.random()*1.1}rem;
+      `;
+      document.body.appendChild(el);
+    }
+  }
+
+  /* ═══════════════════════════════════
+     SECRET MESSAGE
+  ═══════════════════════════════════ */
+    /* ═══════════════════════════════════
+     EMAILJS CONFIG
+     ✏️ Điền 3 giá trị lấy từ emailjs.com
+  ═══════════════════════════════════ */
+  const EJS_PUBLIC_KEY  = '0PaxAH1gP52iBtdec';    // Account → General → Public Key
+  const EJS_SERVICE_ID  = 'service_xu9cm7b';    // Email Services → Service ID
+  const EJS_TEMPLATE_ID = 'template_bx8s3bd';   // Email Templates → Template ID
+
+  let secretOpen = false;
+  function revealSecret() {
+    if (secretOpen) return;
+    secretOpen = true;
+    const flower = document.getElementById('middle-flower');
+    flower.classList.add('revealed');
+    flower.textContent = '🌷';
+    document.getElementById('secret-msg').classList.add('open');
+    // gửi email thông báo qua EmailJS
+    if (EJS_PUBLIC_KEY === 'YOUR_PUBLIC_KEY') return;
+    try {
+      const now  = new Date();
+      const time = now.toLocaleString('vi-VN', {
+        hour: '2-digit', minute: '2-digit',
+        day: '2-digit',  month: '2-digit', year: 'numeric'
+      });
+      emailjs.init(EJS_PUBLIC_KEY);
+      emailjs.send(EJS_SERVICE_ID, EJS_TEMPLATE_ID, { time });
+    } catch(e) {
+      // gửi thất bại cũng không ảnh hưởng gì đến thiệp
+    }
+  }
+
+  /* ═══════════════════════════════════
+     CARD HEART CLICKER
+  ═══════════════════════════════════ */
+  let cardClicks = 0;
+  function clickCardHeart(el) {
+    cardClicks++;
+    const msgs = [
+      `💕 Bạn đã thả tim ${cardClicks} lần rồi đó!`,
+      `😍 ${cardClicks} trái tim! Yêu quá trời!`,
+      `🥰 ${cardClicks} lần... bạn thật dễ thương!`,
+      `💖 Tim thứ ${cardClicks}! Không ngừng được à?`,
+      `🌸 ${cardClicks} tim rồi! Thiệp hạnh phúc lắm!`,
+      `✨ ${cardClicks}?! Kỷ lục mới chăng? 😂`,
+      `🎉 ${cardClicks} lần! Bạn nghiện thiệp này rồi!`,
+    ];
+    const counter = document.getElementById('click-counter-card');
+    counter.textContent = msgs[Math.min(cardClicks-1, msgs.length-1)];
+    counter.classList.add('visible');
+    el.style.transform = 'scale(1.6)';
+    setTimeout(() => el.style.transform = '', 200);
+
+    const rect = el.getBoundingClientRect();
+    const cx   = rect.left + rect.width/2;
+    const cy   = rect.top  + rect.height/2;
+    ['💕','✨','🌸','💗'].forEach((emoji, i) => {
+      const p = document.createElement('div');
+      const angle = Math.PI*2/4*i;
+      p.style.cssText = `
+        position:fixed; pointer-events:none; z-index:999; font-size:.9rem;
+        left:${cx}px; top:${cy}px; transform:translate(-50%,-50%);
+        --tx:${Math.cos(angle)*45}px; --ty:${Math.sin(angle)*45-28}px;
+        --rot:${(Math.random()-.5)*360}deg;
+        animation: particleFly .6s ease-out forwards;
+      `;
+      p.textContent = emoji;
+      document.body.appendChild(p);
+      setTimeout(() => p.remove(), 700);
+    });
+  }
+</script>
+
+<style>
+  @keyframes particleFly {
+    0%   { transform:translate(-50%,-50%) scale(1) rotate(0deg); opacity:1; }
+    100% { transform:translate(calc(-50% + var(--tx)),calc(-50% + var(--ty))) scale(0) rotate(var(--rot)); opacity:0; }
+  }
+</style>
+</body>
+</html>
